@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # %%
 merged_csv_path = './yolov5x_fold0_1_2_3_4_768_conf_0.01_d2_r101fpn3x_054999_vfnet_r101fpn_8020_fold0_1_2_3_4_wbf_skbthr_0.03_v45_submission_rerun.csv'
-output_fig_path = './score_histograms.png'
+output_fig_path = './artifacts/score_histograms.png'
 
 # %%
 merged_df = pd.read_csv(merged_csv_path)
@@ -29,7 +29,7 @@ plt.hist(boxes_df['score'], bins=50)
 plt.xlabel('score')
 plt.ylabel('count')
 plt.title('Score distribution (all classes)')
-plt.savefig('./score_histogram_overall.png', dpi=150, bbox_inches='tight')
+plt.savefig('./artifacts/score_histogram_overall.png', dpi=150, bbox_inches='tight')
 plt.close()
 
 # %%
@@ -54,6 +54,6 @@ plt.close()
 percentiles = [0.1, 0.25, 0.5, 0.75, 0.9]
 summary = boxes_df.groupby('label')['score'].describe(percentiles=percentiles)
 print(summary)
-summary.to_csv('./score_summary_by_class.csv')
+summary.to_csv('./artifacts/score_summary_by_class.csv')
 
 # %%
