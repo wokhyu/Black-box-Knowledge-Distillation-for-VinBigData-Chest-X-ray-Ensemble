@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>VinBigData Chest X-ray Detection Demo</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 16px; }
+  h1 { font-size: 1.4rem; }
+  #dropzone { border: 2px dashed #999; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; }
+  #dropzone.dragover { background: #f0f0f0; }
+  #result-image { max-width: 100%; margin-top: 16px; border-radius: 8px; display: none; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #ddd; }
+  th { background: #fafafa; }
+  #status { margin-top: 8px; color: #666; }
+  button { margin-top: 12px; padding: 8px 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h1>VinBigData Chest X-ray Detection Demo</h1>
+
+  <div id="dropzone">
+    Kéo thả ảnh X-ray vào đây, hoặc click để chọn file
+    <input type="file" id="file-input" accept="image/*" style="display:none">
+  </div>
+
+  <button id="predict-btn" disabled>Dự đoán</button>
+  <div id="status"></div>
+
+  <img id="result-image" alt="Kết quả dự đoán">
+
+  <table id="result-table" style="display:none">
+    <thead>
+      <tr><th>Bệnh</th><th>Độ tin cậy</th></tr>
+    </thead>
+    <tbody id="result-tbody"></tbody>
+  </table>
+
+<script>
+const API_URL = "http://localhost:8000/predict";
+
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("file-input");
+const predictBtn = document.getElementById("predict-btn");
+const statusEl = document.getElementById("status");
+const resultImage = document.getElementById("result-image");
+const resultTable = document.getElementById("result-table");
+const resultTbody = document.getElementById("result-tbody");
+
+let selectedFile = null;
+
+dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+dropzone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropzone.classList.remove("dragover");
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", (e) => {
+  if (e.target.files.length) setFile(e.target.files[0]);
+});
+
+function setFile(file) {
+  selectedFile = file;
+  dropzone.textContent = `Đã chọn: ${file.name}`;
+  predictBtn.disabled = false;
+}
+
+predictBtn.addEventListener("click", async () => {
+  if (!selectedFile) return;
+  statusEl.textContent = "Đang dự đoán...";
+  predictBtn.disabled = true;
+
+  const formData = new FormData();
+  formData.append("file", selectedFile);
+
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: formData });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+
+    resultImage.src = `data:image/png;base64,${data.image_base64}`;
+    resultImage.style.display = "block";
+
+    resultTbody.innerHTML = "";
+    if (data.detections.length === 0) {
+      resultTbody.innerHTML = "<tr><td colspan='2'>Không phát hiện bệnh</td></tr>";
+    } else {
+      for (const d of data.detections) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${d.class}</td><td>${(d.confidence * 100).toFixed(1)}%</td>`;
+        resultTbody.appendChild(row);
+      }
+    }
+    resultTable.style.display = "table";
+    statusEl.textContent = "";
+  } catch (err) {
+    statusEl.textContent = `Lỗi: ${err.message}`;
+  } finally {
+    predictBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
